@@ -22,6 +22,7 @@
 1. 과목 `README.md`에 날짜, 주제, 이해도, 링크를 추가합니다.
 2. `00-daily-report/README.md`에 날짜, 과목, 주제, 원본 링크를 추가합니다.
 3. `00-daily-report/YYYY-MM-DD.md`에 원본 노트 내용을 그대로 복사합니다.
+4. `bash scripts/status.sh`를 실행해 최상단 `README.md`의 공부 현황(연속 일수·최근 노트)을 갱신합니다.
 
 예시:
 
@@ -34,3 +35,4 @@
 - 과목별 노트가 원본입니다.
 - 데일리 리포트는 빠른 참고용 복사본입니다.
 - README에는 본문을 복사하지 않고 목록만 남깁니다.
+- 공부 현황은 `scripts/status.sh`가 최상단 `README.md`의 `<!-- STATUS:START --> ~ END -->` 구간을 자동으로 갱신합니다. 이 구간은 손으로 고치지 않습니다.
