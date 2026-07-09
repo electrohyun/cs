@@ -11,3 +11,4 @@
 | --- | --- | --- | --- |
 | 2026-07-07 | Network | 주소창에 URL을 입력하면 일어나는 과정 | [노트](../01_network/2026-07-07-화-주소창에-URL을-입력하면-일어나는-과정.md) |
 | 2026-07-08 | Network | HTTP vs HTTPS | [노트](../01_network/2026-07-08-수-HTTP-vs-HTTPS.md) |
+| 2026-07-09 | Frontend | CRP (Critical Rendering Path) | [노트](../01_frontend/2026-07-09-목-CRP-크리티컬-렌더링-패스.md) |
