@@ -13,3 +13,4 @@
 | 2026-07-08 | Network | HTTP vs HTTPS | [노트](../01_network/2026-07-08-수-HTTP-vs-HTTPS.md) |
 | 2026-07-09 | Frontend | CRP (Critical Rendering Path) | [노트](../01_frontend/2026-07-09-목-CRP-크리티컬-렌더링-패스.md) |
 | 2026-07-10 | Network | HTTP (메서드·상태코드·버전·구조) | [노트](../01_network/2026-07-10-금-HTTP.md) |
+| 2026-07-13 | JavaScript | new 연산자 (동작 4단계) | [노트](../01_javascript/2026-07-13-월-JavaScript-new-연산자.md) |

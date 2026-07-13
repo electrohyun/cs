@@ -16,6 +16,10 @@ README="README.md"
 # 과목 폴더명 -> 보기 좋은 라벨 (01_network -> Network)
 label() {
   local name="${1#*_}"          # 01_ 접두어 제거
+  # 특수 표기 예외 (자동 대문자화로는 안 예쁜 것들)
+  case "$name" in
+    javascript) echo "JavaScript"; return ;;
+  esac
   name="${name//-/ }"           # 하이픈 -> 공백
   # 각 단어 첫 글자 대문자
   echo "$name" | awk '{ for (i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2) } 1'
