@@ -15,3 +15,4 @@
 | 2026-07-10 | Network | HTTP (메서드·상태코드·버전·구조) | [노트](../01_network/2026-07-10-금-HTTP.md) |
 | 2026-07-13 | JavaScript | new 연산자 (동작 4단계) | [노트](../01_javascript/2026-07-13-월-JavaScript-new-연산자.md) |
 | 2026-07-14 | Network | CORS (SOP·Preflight·응답 읽기 차단) | [노트](../01_network/2026-07-14-화-CORS.md) |
+| 2026-07-15 | JavaScript | 프로토타입 (체인·상속·섀도잉) | [노트](../01_javascript/2026-07-15-수-JavaScript-프로토타입.md) |
