@@ -17,3 +17,4 @@
 | 2026-07-14 | Network | CORS (SOP·Preflight·응답 읽기 차단) | [노트](../01_network/2026-07-14-화-CORS.md) |
 | 2026-07-15 | JavaScript | 프로토타입 (체인·상속·섀도잉) | [노트](../01_javascript/2026-07-15-수-JavaScript-프로토타입.md) |
 | 2026-07-16 | JavaScript | `__proto__` · 프로토타입 접근자 (getPrototypeOf/setPrototypeOf) · 오염 | [노트](../01_javascript/2026-07-16-목-JavaScript-__proto__와-프로토타입-접근자.md) |
+| 2026-07-17 | Network | mock 트래픽과 개발자도구 네트워크 탭 (계층 통과·Service Worker·WebSocket 한계) | [노트](../01_network/2026-07-17-금-mock-트래픽과-개발자도구-네트워크-탭.md) |
