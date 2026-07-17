@@ -13,6 +13,32 @@ cd "$(dirname "$0")/.."
 
 README="README.md"
 
+# date 구현체 감지 (macOS=BSD, Windows Git Bash/Linux=GNU)
+# BSD date는 -j -f, GNU date는 -d 로 날짜를 파싱합니다.
+if date -j -f "%Y-%m-%d" "2000-01-01" +%u >/dev/null 2>&1; then
+  DATE_KIND="bsd"
+else
+  DATE_KIND="gnu"
+fi
+
+# YYYY-MM-DD -> 요일 번호 (1=월 .. 7=일)
+dow_of() {
+  if [ "$DATE_KIND" = "bsd" ]; then
+    date -j -f "%Y-%m-%d" "$1" +%u
+  else
+    date -d "$1" +%u
+  fi
+}
+
+# YYYY-MM-DD -> 하루 전 날짜 (YYYY-MM-DD)
+prev_day() {
+  if [ "$DATE_KIND" = "bsd" ]; then
+    date -j -v-1d -f "%Y-%m-%d" "$1" +%Y-%m-%d
+  else
+    date -d "$1 - 1 day" +%Y-%m-%d
+  fi
+}
+
 # 과목 폴더명 -> 보기 좋은 라벨 (01_network -> Network)
 label() {
   local name="${1#*_}"          # 01_ 접두어 제거
@@ -59,14 +85,14 @@ latest="$(echo "$dates_desc" | head -1)"
 if [ -n "$latest" ]; then
   cur="$latest"
   while true; do
-    dow="$(date -j -f "%Y-%m-%d" "$cur" +%u 2>/dev/null)"   # 1=월 .. 7=일
+    dow="$(dow_of "$cur")"                                   # 1=월 .. 7=일
     if [ "$dow" -ge 6 ]; then
-      cur="$(date -j -v-1d -f "%Y-%m-%d" "$cur" +%Y-%m-%d)"
+      cur="$(prev_day "$cur")"
       continue
     fi
     if is_studied "$cur"; then
       streak=$((streak + 1))
-      cur="$(date -j -v-1d -f "%Y-%m-%d" "$cur" +%Y-%m-%d)"
+      cur="$(prev_day "$cur")"
     else
       break
     fi
