@@ -20,3 +20,4 @@
 | 2026-07-17 | Network | mock 트래픽과 개발자도구 네트워크 탭 (계층 통과·Service Worker·WebSocket 한계) | [노트](../01_network/2026-07-17-금-mock-트래픽과-개발자도구-네트워크-탭.md) |
 | 2026-07-20 | Network | 웹소켓 핸드셰이크 (Upgrade·101·Key/Accept) | [노트](../01_network/2026-07-20-월-웹소켓-핸드셰이크.md) |
 | 2026-07-21 | Network | TCP 핸드셰이크 (3-way·4-way·상태전이·SYN Flood/Cookie) | [노트](../01_network/2026-07-21-화-TCP-핸드셰이크.md) |
+| 2026-07-22 | JavaScript | 프로미스 ① 개념·상태·체이닝 (3상태·executor·then/catch/finally) | [노트](../01_javascript/2026-07-22-수-JavaScript-프로미스.md) |
