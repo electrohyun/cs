@@ -6,6 +6,6 @@
 ## Promise (JavaScript)
 
 - [x] 1일차 (2026-07-22) — 개념·상태·체이닝
-- [ ] 2일차 — 이벤트 루프
+- [x] 2일차 (2026-07-23) — 이벤트 루프
 - [ ] 3일차 — 마이크로태스크 큐 / async-await
 - [ ] 4일차 — 조합 API(all·allSettled·race·any)·에러 전파
