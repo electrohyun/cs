@@ -1,0 +1,1031 @@
+# JavaScript async / await — 3일차: 마이크로태스크 큐 복습 · async/await
+
+## 잘 알고 있는지
+
+- 🤔
+
+## 내가 아는 만큼 설명
+
+- async await은 비동기 작업이 있을때 사용한다.
+- 어제는 이벤트 루프와 콜 스택, 태스크 큐에 대해서 배웠다.
+
+## 답을 본 뒤 알게 된 것
+
+---
+
+## A. 마이크로태스크 큐 (2일차 복습)
+
+### A-1. 마이크로태스크 큐란
+
+```
+콜 스택 (실행 장소)
+태스크 큐 (대기 장소) — 이벤트 루프가 스택이 비면 하나 꺼내 push
+```
+
+- 마이크로태스크 큐는 태스크 큐와 별개로 존재하는 두 번째 대기 장소다. 자료구조는 같다. FIFO이고, 함수 참조가 들어가고, JS에서 접근할 수 없다.
+- 실행되는 장소는 여전히 콜 스택이다. 태스크 큐도 마이크로태스크 큐도 대기 장소일 뿐이다.
+
+태스크 큐와 다른 점은 두 가지.
+
+1. **소속 명세가 다르다.** 태스크 큐는 HTML 명세가 정의한다. 마이크로태스크 큐는 ECMAScript 명세에서 `PromiseJobs`라는 이름으로 정의돼 있고, HTML 명세의 microtask queue가 같은 것을 가리킨다.
+2. **이벤트 루프가 처리하는 양이 다르다.** 태스크 큐는 한 틱에 하나만 꺼낸다. 마이크로태스크 큐는 빌 때까지 전부 꺼낸다. 처리 시점은 태스크 하나가 끝난 직후, 렌더링과 다음 태스크보다 먼저다.
+
+2일차 의사코드는 이렇게 변한다.
+
+```
+task = 태스크 큐에서 하나 꺼냄;
+task를 콜 스택에 push;
+콜 스택이 빌 때까지 대기;
+
+while (마이크로태스크 큐가 비어있지 않음) {   // ← 추가
+  m = 하나 꺼냄;
+  m을 콜 스택에 push;
+  콜 스택이 빌 때까지 대기;
+}
+
+렌더링이 필요하면 렌더링;
+```
+
+**확인 문제.** 스크립트 태스크가 막 끝나서 콜 스택이 비었다. 태스크 큐에 2개, 마이크로태스크 큐에 2개가 대기 중이다. 이벤트 루프가 다음 렌더링 전까지 처리하는 건 총 몇 개고 어느 쪽인가?
+
+**답.** 마이크로태스크 2개. 마이크로태스크 소진은 렌더링보다 앞이므로 둘 다 나가고, 태스크 큐 2개는 렌더링 뒤로 밀린다.
+
+---
+
+### A-2. 무엇이 마이크로태스크 큐에 들어가는가
+
+```js
+p.then(cb) / p.catch(cb) / p.finally(cb)
+await p
+queueMicrotask(cb)
+MutationObserver 콜백
+```
+
+여기서 갈리는 것이 **등록 시점과 진입 시점이 다르다**는 것.
+
+```js
+const p = new Promise((resolve) => {
+  setTimeout(() => resolve(1), 100);
+});
+p.then(cb);
+```
+
+```
+0ms   new Promise 실행 → executor 즉시 동기 실행
+      executor 안에서 setTimeout 등록만 하고 반환
+      p.state = "pending"
+      p.value = undefined
+
+      p.then(cb) 호출
+      p가 pending이므로 cb는 마이크로태스크 큐로 안 감
+      p.callbacks = [cb]         ← p 객체 내부에 저장
+
+100ms 타이머 만료 → 콜백이 태스크 큐 → 콜 스택
+      resolve(1) 실행
+      p.state = "fulfilled"
+      p.value = 1
+      p.callbacks에 저장돼 있던 cb를 마이크로태스크 큐로 이동
+      p.callbacks = []
+```
+
+- `resolve`는 executor의 첫 번째 매개변수다. `new Promise(r => ...)`처럼 이름을 줄여 쓰면 코드에 `resolve`라는 글자가 안 보일 뿐, 같은 함수다.
+
+#### "등록만 하고 반환"의 등록은 어디에 하는가
+
+브라우저 내부의 **타이머 모듈**에 한다. 2일차 2번 "setTimeout 호출 시 실제로 일어나는 일"과 같은 내용이다.
+
+```js
+setTimeout(() => resolve(1), 100);
+```
+
+1. `setTimeout` 컨텍스트가 콜 스택에 push된다.
+2. 이 함수의 본체는 JS가 아니라 브라우저가 C++로 구현한 코드다. 브라우저 타이머 모듈의 자료구조에 항목을 하나 추가한다.
+
+```
+{ callback: () => resolve(1), expiry: 현재시각 + 100 }
+```
+
+3. 타이머 ID(숫자)를 반환하고 즉시 pop된다.
+
+저장되는 `callback`은 함수 참조다. 그리고 그 화살표 함수가 `resolve`를 **클로저로 붙잡고 있다.** `new Promise`가 끝나서 executor 컨텍스트가 콜 스택에서 pop돼도 `resolve` 함수 객체는 사라지지 않는다. 100ms 뒤에 `resolve(1)`이 호출될 수 있는 이유가 이것이다.
+
+#### pop돼도 왜 안 사라지는가
+
+콜 스택에서만 사라진다. 객체 자체는 **힙**에 있고 힙은 콜 스택과 별개다. 2일차 2번 "엔진이 가진 것 — 콜 스택, 힙" 그 힙이다.
+
+2일차에 실행 컨텍스트가 가진 것을 이렇게 적었다.
+
+```
+LexicalEnvironment  → 환경 레코드에 대한 참조
+VariableEnvironment → 환경 레코드에 대한 참조
+ThisBinding
+반환 주소
+Outer 참조
+```
+
+전부 **참조**다. 변수 값이 담긴 환경 레코드 자체는 힙에 할당된다. 콜 스택에 있는 건 그걸 가리키는 포인터와 실행 위치 정보다. 그래서 pop이 하는 일은 스택에서 컨텍스트를 제거하는 것뿐이고, 힙의 환경 레코드는 그대로 남는다.
+
+힙에 남은 것은 GC가 지운다. 기준은 하나다. **루트에서 참조로 도달 가능한가.** 도달 불가능이면 회수하고, 도달 가능하면 안 건드린다.
+
+이 코드의 참조 사슬은 이렇다.
+
+```
+브라우저 타이머 모듈 (루트)
+  └─ { callback, expiry }
+       └─ callback = () => resolve(1)    ← 힙의 함수 객체
+            └─ [[Environment]]           ← 함수 객체의 내부 슬롯
+                 └─ executor 환경 레코드  ← 힙
+                      └─ resolve 바인딩
+                           └─ resolve 함수 객체  ← 힙
+                                └─ p 객체        ← 힙
+```
+
+- 함수 객체는 생성될 때 `[[Environment]]` 내부 슬롯에 **자기가 만들어진 위치의 환경 레코드 참조**를 저장한다.
+- 화살표 함수가 만들어진 위치는 executor 안이고, `resolve`는 executor의 매개변수이므로 executor 환경 레코드에 바인딩돼 있다.
+- 타이머 모듈이 루트에서 `callback`을 붙잡고 있으므로 이 사슬 전체가 도달 가능이다. GC가 하나도 못 지운다. executor 컨텍스트가 pop된 지 한참 지나도 마찬가지다.
+
+클로저의 실제 정체가 이것이다. "함수가 변수를 기억한다"가 아니라, 함수 객체의 `[[Environment]]` 슬롯이 환경 레코드를 참조하고 있어서 GC 대상이 되지 않는 것이다.
+
+만료 이후의 참조 변화.
+
+```
+100ms  타이머 모듈이 항목을 태스크 큐로 옮김
+       → 이제 태스크 큐가 루트에서 callback을 붙잡는다
+       callback 실행 후 태스크 큐에서 제거
+       → 아무도 callback을 참조하지 않음
+       → callback, executor 환경 레코드, resolve 순으로 회수 대상이 된다
+       (p는 다른 곳에서 참조 중이면 남는다)
+```
+
+100ms가 지나면 타이머 모듈이 그 항목을 지우고 `callback`을 **태스크 큐**에 넣는다. 이 시점에도 실행은 안 된다. 콜 스택이 빈 뒤 이벤트 루프가 꺼내 push한다.
+
+#### 저장 장소가 세 군데로 나뉜다
+
+| 무엇                | 어디에 저장되나            | 언제까지                     |
+| ------------------- | -------------------------- | ---------------------------- |
+| `setTimeout`의 콜백 | 브라우저 타이머 모듈       | 만료 시각이 될 때까지        |
+| `.then`의 콜백      | `p` 객체 내부 콜백 목록    | `p`가 settled로 바뀔 때까지  |
+| 조건이 충족된 콜백  | 태스크 / 마이크로태스크 큐 | 이벤트 루프가 꺼내 갈 때까지 |
+
+위 코드의 50ms 시점 상태.
+
+```
+브라우저 타이머 모듈: [{ callback: () => resolve(1), expiry: t+100 }]
+p 객체:              { state: "pending", value: undefined, callbacks: [cb] }
+태스크 큐:            []
+마이크로태스크 큐:    []
+콜 스택:              []
+```
+
+두 콜백 다 태스크 큐에도 마이크로태스크 큐에도 없다. 각자의 조건이 아직 충족되지 않았기 때문이다. 조건이 순서대로 충족되면 이렇게 이동한다.
+
+```
+100ms  타이머 만료
+       () => resolve(1)  →  태스크 큐
+
+       이벤트 루프가 꺼내 콜 스택에 push → resolve(1) 실행
+       p.state = "fulfilled", p.value = 1
+       cb  →  마이크로태스크 큐
+
+       콜 스택이 비면 마이크로태스크 소진 → cb(1) 실행
+```
+
+- `.then` 호출 시점에 `p`는 pending이다. 이때 `cb`는 큐에 안 들어가고 `p` 객체 내부의 콜백 목록에 저장된다. 100ms 뒤 `resolve(1)`이 실행되면서 `p`가 fulfilled로 바뀌고, **그 순간** 저장돼 있던 `cb`가 마이크로태스크 큐로 옮겨진다.
+
+이미 settled된 프로미스면 저장 단계가 없다.
+
+```js
+Promise.resolve(1).then(cb); // .then 호출하는 즉시 cb가 마이크로태스크 큐 진입
+```
+
+**한 줄로 압축.** `.then(cb)`을 호출했을 때 `cb`가 마이크로태스크 큐로 가느냐 마느냐는 **그 시점 프로미스의 state가 settled인지 pending인지**로 갈린다. pending이면 프로미스 객체의 callbacks 배열에 보관돼 있다가 settled로 바뀌는 순간 마이크로태스크 큐로 옮겨진다.
+
+#### queueMicrotask
+
+```js
+queueMicrotask(cb);
+```
+
+- 호스트 환경이 제공하는 함수다. `setTimeout`과 같은 위치에 있다. ECMAScript가 아니라 HTML 명세 소속이고 `window`에 붙어 있다.
+- 차이는 어느 큐에 넣느냐다. `setTimeout`은 타이머 모듈을 거쳐 태스크 큐로, `queueMicrotask`는 지연도 조건도 없이 호출 즉시 마이크로태스크 큐로 넣는다.
+- 프로미스가 개입하지 않으니 state 검사도 없고, 반환값은 `undefined`다. `.then`이 새 프로미스를 반환하는 것과 다르다.
+
+**확인 문제.**
+
+```js
+const p = Promise.resolve();
+
+p.then(() => console.log("A"));
+queueMicrotask(() => console.log("B"));
+p.then(() => console.log("C"));
+```
+
+**답.** `A B C`
+
+`p`의 state가 세 줄 내내 `"fulfilled"`로 고정돼 있다는 것이 전부다.
+
+**`const p = Promise.resolve();`**
+
+`Promise.resolve()`는 executor를 실행하지 않는다. 처음부터 확정된 객체를 만들어 반환한다.
+
+```
+p = { state: "fulfilled", value: undefined, callbacks: [] }
+```
+
+`p`가 pending인 순간이 아예 없다. 그리고 state는 한 번 확정되면 다시 바뀌지 않는다.
+
+**`p.then(() => console.log("A"));`**
+
+```
+콜 스택: [전역, then]
+  then이 하는 일: p.state 검사
+  "fulfilled" → 저장 단계를 건너뛰고 마이크로태스크 큐에 바로 넣는다
+콜 스택: [전역]        마이크로태스크 큐: [A]
+```
+
+A는 마이크로태스크 큐에 들어갔을 뿐 실행되지 않았다. 콜 스택에 전역 컨텍스트가 남아 있어 이벤트 루프가 소진 단계로 가지 못한다.
+
+**`queueMicrotask(() => console.log("B"));`**
+
+```
+콜 스택: [전역, queueMicrotask]
+  state 검사 없음. 프로미스가 개입하지 않는다
+콜 스택: [전역]        마이크로태스크 큐: [A, B]
+```
+
+**`p.then(() => console.log("C"));`**
+
+`p.state`는 여전히 `"fulfilled"`다. A 때와 동일한 판정.
+
+```
+마이크로태스크 큐: [A, B, C]
+```
+
+**소진**
+
+```
+스크립트 끝 → 콜 스택 []
+A 꺼내 push → 'A' 출력 → pop
+B 꺼내 push → 'B' 출력 → pop
+C 꺼내 push → 'C' 출력 → pop
+```
+
+셋 다 즉시 진입이라 코드 작성 순서 = 마이크로태스크 큐 진입 순서 = 출력 순서가 됐다.
+
+#### p가 pending이었다면
+
+```js
+const p = new Promise((resolve) => setTimeout(resolve, 100));
+
+p.then(() => console.log("A"));
+queueMicrotask(() => console.log("B"));
+p.then(() => console.log("C"));
+```
+
+```
+0ms   p.then(A) → p.state === "pending" → p.callbacks = [A]
+      queueMicrotask(B) → 상태와 무관 → 마이크로태스크 큐: [B]
+      p.then(C) → 여전히 pending → p.callbacks = [A, C]
+
+      스크립트 끝, 소진 → 'B' 출력
+      마이크로태스크 큐: []      p.callbacks: [A, C]   ← A, C는 아직 마이크로태스크 큐 밖
+
+100ms 타이머 만료 → resolve() 실행
+      p.state = "fulfilled"
+      p.callbacks를 앞에서부터 순회하며 마이크로태스크 큐로 이동
+        마이크로태스크 큐: [A, C]
+      p.callbacks = []
+
+      소진 → 'A' → 'C'
+```
+
+출력은 `B A C`.
+
+- B가 먼저인 이유: `queueMicrotask`은 프로미스 state를 보지 않으므로 0ms에 이미 마이크로태스크 큐에 있었다. A·C는 100ms까지 `p.callbacks` 배열에 있었고, 거긴 큐가 아니라 이벤트 루프가 보지 않는다.
+- A가 C보다 먼저인 이유: `p.callbacks`는 등록 순서대로 쌓이고 순회도 그 순서다.
+
+---
+
+### A-3. 소진 규칙
+
+```
+태스크 큐         → 한 틱에 1개
+마이크로태스크 큐 → 빌 때까지 전부
+```
+
+"빌 때까지 전부"에 포함되는 것이 하나 더 있다. **소진 도중에 새로 추가된 마이크로태스크도 같은 틱에서 처리한다.** 마이크로태스크 큐가 완전히 빌 때까지 이 단계를 벗어나지 않는다.
+
+- 여기서 "틱"은 이벤트 루프 반복 한 바퀴다. 2일차 4번에서 정의한 그 틱.
+
+**확인 문제.**
+
+```js
+setTimeout(() => console.log("t"), 0);
+
+Promise.resolve().then(() => {
+  console.log("m1");
+  Promise.resolve().then(() => console.log("m2"));
+});
+
+console.log("sync");
+```
+
+1. 출력 순서는?
+2. `m1`이 출력된 직후 태스크 큐와 마이크로태스크 큐에는 각각 뭐가 있나?
+
+**답.**
+
+1. `sync m1 m2 t`
+2. 태스크 큐 `[t]`, 마이크로태스크 큐 `[m2]`
+   - m1은 마이크로태스크 큐에서 꺼내져 콜 스택에 있으므로 어느 큐에도 없다.
+   - m2는 소진 도중 추가됐지만 같은 틱에서 처리되므로 t보다 먼저 나간다.
+
+```
+[스크립트 태스크]
+  setTimeout 등록 → 만료 → 태스크 큐: [t]
+  then 등록 → p가 이미 fulfilled → 마이크로태스크 큐: [m1]
+  'sync' 출력
+  콜 스택: []
+
+[마이크로태스크 소진]
+  m1 실행 → 'm1' 출력 → 마이크로태스크 큐: [m2]
+  마이크로태스크 큐가 안 비었으므로 계속
+  m2 실행 → 'm2' 출력 → 마이크로태스크 큐: []
+
+[다음 틱]
+  t 실행 → 't' 출력
+```
+
+#### 기아 상태 (starvation)
+
+소진 규칙이 "마이크로태스크 큐가 빌 때까지"인데, 그 큐가 안 비면 어떻게 되는가.
+
+```js
+function loop() {
+  Promise.resolve().then(loop);
+}
+loop();
+
+setTimeout(() => console.log("영원히 안 나옴"), 0);
+```
+
+`.then(loop)`은 `loop`을 호출하는 게 아니다. 괄호가 없다. `loop` 함수 객체 참조를 인자로 넘겨 마이크로태스크 큐에 넣는 것뿐이다.
+
+```
+마이크로태스크 큐: [loop]        태스크 큐: [t콜백]
+
+loop 꺼내 콜 스택에 push
+  .then(loop) → 마이크로태스크 큐: [loop]   ← 꺼낸 만큼 다시 채워짐
+loop pop → 콜 스택 []
+
+마이크로태스크 큐 길이가 1 → 소진 단계 계속
+loop 꺼내 push → 마이크로태스크 큐: [loop] → pop
+loop 꺼내 push → 마이크로태스크 큐: [loop] → pop
+...
+```
+
+하나 꺼내면 하나가 들어온다. 마이크로태스크 큐 길이가 영원히 0이 되지 않는다.
+
+#### 이벤트 루프의 어느 반복에서 도느냐
+
+의사코드를 다시 놓고 보면 반복이 두 겹이다.
+
+```
+while (브라우저가 살아있는 동안) {      // ← 바깥 반복
+  task = 태스크 큐에서 하나 꺼냄;
+  task를 콜 스택에 push;
+  콜 스택이 빌 때까지 대기;
+
+  while (마이크로태스크 큐가 비어있지 않음) {   // ← 안쪽 반복
+    m = 하나 꺼냄;
+    m을 콜 스택에 push;
+    콜 스택이 빌 때까지 대기;
+  }
+
+  렌더링이 필요하면 렌더링;
+}
+```
+
+**프로미스 버전**은 안쪽 반복 안에서 돈다.
+
+```
+바깥 반복 1회차
+  태스크 하나 처리
+  안쪽 while 진입
+    loop 실행 → 마이크로태스크 큐에 loop 추가
+    loop 실행 → 마이크로태스크 큐에 loop 추가
+    ...                      ← 안쪽 while을 못 빠져나감
+  렌더링                      ← 도달 못함
+바깥 반복 2회차               ← 도달 못함
+```
+
+안쪽 `while` 뒤에 있는 코드가 전부 실행되지 않는다. 태스크 큐의 `t콜백`은 이미 들어와 있는데 꺼내지지 않고, 렌더링도 안 되고, 클릭 이벤트도 처리되지 않는다. 화면이 멈춘다.
+
+콜 스택은 매번 `[loop]` → `[]`로 완전히 비워진 뒤 다시 push되므로 깊이가 1을 넘지 않는다. 그래서 스택 오버플로가 나지 않는다. 브라우저는 멈추는데 콘솔에 에러가 없다.
+
+**setTimeout 버전**은 바깥 반복에서 돈다.
+
+```js
+function loop() {
+  setTimeout(loop, 0);
+}
+loop();
+```
+
+```
+바깥 반복 1회차
+  태스크 큐에서 loop 꺼내 실행 → 태스크 큐에 loop 추가
+  안쪽 while: 마이크로태스크 큐 비어있음 → 즉시 통과
+  렌더링                      ← 실행됨
+
+바깥 반복 2회차
+  태스크 큐에서 loop 꺼내 실행 → 태스크 큐에 loop 추가
+  안쪽 while 통과
+  렌더링                      ← 실행됨
+...
+```
+
+한 바퀴에 태스크를 하나만 꺼내므로 매 바퀴 끝에서 렌더링과, 어느 태스크 큐에서 꺼낼지 다시 고르는 지점을 지나간다. 클릭 이벤트가 들어오면 다음 바퀴에서 그걸 먼저 꺼낼 수도 있다.
+
+**정리.** 둘 다 무한 반복이다. 브라우저가 멈추는지 아닌지는 그 반복이 이벤트 루프의 한 단계를 점유하는지, 아니면 매 바퀴 완주하고 다시 들어오는지로 갈린다. 마이크로태스크 소진은 "빌 때까지"라 점유하고, 태스크 처리는 "하나만"이라 점유하지 못한다.
+
+마이크로태스크에 무거운 작업이나 반복 재등록을 넣으면 안 되는 이유가 이것이다.
+
+---
+
+## B. async / await
+
+### B-0. async와 await이란
+
+#### async
+
+함수 선언 앞에 붙이는 키워드다. 두 가지를 바꾼다.
+
+```js
+async function f() { ... }
+```
+
+1. **반환값이 무조건 프로미스가 된다.** 무엇을 return하든 엔진이 프로미스로 감싼다.
+2. **본체 안에서 `await`을 쓸 수 있게 된다.** `async`가 없는 함수에서 `await`을 쓰면 SyntaxError다.
+
+#### await
+
+`async` 함수 본체 안에서 쓰는 연산자다.
+
+```js
+const v = await p;
+```
+
+`p`가 settled될 때까지 **그 async 함수의 실행을 중단**하고, 확정된 값을 `await` 식의 값으로 돌려준다. `p`가 rejected면 값을 돌려주는 대신 그 자리에서 예외를 throw한다.
+
+중단되는 것은 그 함수 하나뿐이다. 스레드는 멈추지 않는다. 메커니즘은 B-2.
+
+#### 왜 있는가
+
+새 기능이 아니다. 1일차에 본 프로미스를 **동기 코드 문법으로 쓰기 위한 문법**이다. 아래 두 함수는 하는 일이 같고 반환값도 둘 다 프로미스다.
+
+```js
+function f() {
+  return fetch(url)
+    .then((r) => r.json())
+    .then((d) => d.items);
+}
+```
+
+```js
+async function f() {
+  const r = await fetch(url);
+  const d = await r.json();
+  return d.items;
+}
+```
+
+`.then` 체이닝에서는 값이 콜백 인자로만 들어오므로, 중간 결과를 다음 단계로 넘기려면 콜백을 겹치거나 바깥 변수에 담아야 한다. `await`은 값을 변수에 직접 대입하므로 그럴 필요가 없다.
+
+#### 중요한 구분
+
+`async/await`은 프로미스를 **만드는** 도구가 아니라 **소비하는** 도구다. 프로미스를 만드는 건 여전히 `new Promise`, `fetch`, `Promise.resolve` 같은 것들이고, `await`은 이미 있는 프로미스가 settled되기를 기다릴 뿐이다.
+
+그래서 프로미스를 대체하는 것이 아니라 프로미스 위에 얹혀 있다. 실행 순서도 전부 마이크로태스크 큐 규칙을 그대로 따른다.
+
+---
+
+### B-1. async 함수의 반환값
+
+`async`를 붙이면 함수의 반환값이 무조건 프로미스가 된다. 반환값이 프로미스가 아니어도 엔진이 감싼다.
+
+```js
+async function f() {
+  return 1;
+}
+
+const r = f();
+console.log(r); // Promise { 1 }
+console.log(r instanceof Promise); // true
+
+r.then((v) => console.log(v)); // 1
+```
+
+`throw`는 rejected 프로미스가 된다.
+
+```js
+async function g() {
+  throw new Error("boom");
+}
+
+g().catch((e) => console.log(e.message)); // 'boom'
+```
+
+- 즉 `async function f() { return 1 }`은 `function f() { return Promise.resolve(1) }`과 거의 같다. "거의"인 이유는 반환값이 프로미스일 때 갈리기 때문이다.
+
+#### return value 와 return promise 의 차이
+
+```js
+async function f() {
+  return Promise.resolve("f"); // 프로미스를 반환
+}
+
+f().then((v) => console.log(v));
+
+Promise.resolve()
+  .then(() => console.log("1"))
+  .then(() => console.log("2"))
+  .then(() => console.log("3"));
+```
+
+출력은 `1 2 f 3`이다. `f`가 `1`보다 먼저 나올 것 같은데 두 칸 밀린다.
+
+**등장하는 객체**
+
+```
+A   f()가 반환하는 프로미스 (async 함수가 만든 것)
+P   f 본체 안의 Promise.resolve("f")
+q0  Promise.resolve()
+q1  q0.then(log1)의 반환값
+q2  q1.then(log2)의 반환값
+```
+
+**동기 구간**
+
+```
+f() 호출 → 콜 스택 [전역, f]
+  P = Promise.resolve("f")   → P.state = "fulfilled", P.value = "f"
+  return P
+
+  async 함수가 return하면 A를 그 값으로 resolve한다.
+  그런데 반환값 P가 프로미스다. A의 값이 P의 값에 달려 있으므로
+  그 자리에서 확정할 수 없다.
+  명세는 "P.then(resolveA, rejectA)를 호출하는 작업"을
+  마이크로태스크 큐에 넣도록 정의한다.
+
+  마이크로태스크 큐: [P의then호출]
+  A.state = "pending"
+콜 스택 [전역]
+
+f().then(cb_f)
+  A.state === "pending" → 마이크로태스크 큐 진입 아님
+  A.callbacks = [cb_f]
+
+Promise.resolve() → q0.state = "fulfilled"
+q0.then(log1)
+  q0가 fulfilled → 마이크로태스크 큐: [P의then호출, log1]
+  q1 반환 (pending)
+q1.then(log2)
+  q1이 pending → q1.callbacks = [log2]
+  q2 반환 (pending)
+q2.then(log3)
+  q2가 pending → q2.callbacks = [log3]
+
+스크립트 끝 → 콜 스택 []
+```
+
+마이크로태스크 큐가 `[P의then호출, log1]`로 시작한다. `f()`가 먼저 실행됐으므로 `P의then호출`이 앞이다.
+
+**왜 `P.then` 호출을 즉시 하지 않고 마이크로태스크 큐에 넣는가**
+
+`P` 자리에 사용자가 직접 만든 객체가 올 수도 있다.
+
+```js
+async function f() {
+  return {
+    then(res) {
+      /* 아무 코드나 가능 */
+    },
+  };
+}
+```
+
+`.then`이 사용자 코드면 resolve 처리 도중에 임의의 코드가 동기 실행된다. 그걸 막으려고 명세가 별도 작업으로 분리해 마이크로태스크 큐에 넣도록 정했다. 네이티브 프로미스도 예외 없이 같은 경로를 탄다.
+
+**마이크로태스크 소진**
+
+```
+마이크로태스크 큐: [P의then호출, log1]
+
+P의then호출 꺼냄
+  P.then(resolveA, rejectA) 실행
+  P가 fulfilled → resolveA 호출 작업이 마이크로태스크 큐 진입
+  마이크로태스크 큐: [log1, resolveA호출]
+
+log1 꺼냄
+  '1' 출력
+  q1.state = "fulfilled" → q1.callbacks의 log2가 마이크로태스크 큐 진입
+  마이크로태스크 큐: [resolveA호출, log2]
+
+resolveA호출 꺼냄
+  A.state = "fulfilled", A.value = "f"
+  A.callbacks의 cb_f가 마이크로태스크 큐 진입
+  마이크로태스크 큐: [log2, cb_f]
+
+log2 꺼냄
+  '2' 출력
+  q2.state = "fulfilled" → q2.callbacks의 log3가 마이크로태스크 큐 진입
+  마이크로태스크 큐: [cb_f, log3]
+
+cb_f 꺼냄
+  'f' 출력
+  마이크로태스크 큐: [log3]
+
+log3 꺼냄
+  '3' 출력
+  마이크로태스크 큐: []
+```
+
+`f`가 밀린 이유는 A가 확정되기까지 마이크로태스크 두 개를 먼저 써야 했기 때문이다. `P의then호출` 하나, `resolveA호출` 하나. 그동안 `log1`과 `log2`가 각각 한 자리씩 앞서 있었다.
+
+`return await`을 쓰면 한 틱 빨라진다.
+
+```js
+async function f() {
+  return await Promise.resolve("f");
+}
+// 출력: 1 f 2 3
+```
+
+- `await`은 아래에서 보듯 1틱만 쓰고, 그 결과값(프로미스가 아닌 값)을 반환하므로 A가 즉시 확정된다.
+- 실무에서 `return await`은 성능보다 **try/catch 안에서 에러를 잡기 위해** 쓴다(B-4).
+
+---
+
+### B-2. await의 정지와 재개 ← 오늘의 핵심
+
+여기가 2일차 콜 스택 지식이 직접 쓰이는 지점이다.
+
+```js
+const p = new Promise((resolve) => setTimeout(() => resolve(10), 100));
+
+async function f() {
+  console.log("1");
+  const v = await p;
+  console.log("2", v);
+}
+
+f();
+console.log("3");
+```
+
+#### 첫 await 전까지는 동기다
+
+`f()`를 호출하면 실행 컨텍스트가 생성돼 콜 스택에 push되고, 일반 함수와 똑같이 위에서부터 실행된다. `console.log("1")`은 동기적으로 실행된다. `async`가 붙었다고 함수 전체가 나중에 실행되는 게 아니다.
+
+#### await를 만났을 때
+
+1. `await`의 피연산자를 평가한다. 여기서는 `p`.
+2. `p`에 대해 "이 값이 확정되면 f를 재개하라"는 콜백을 등록한다. `p.then(재개)`과 같은 등록이다.
+3. **f의 실행 컨텍스트를 콜 스택에서 pop한다.** 단, 버리지 않고 보관한다. 보관되는 내용은 다음과 같다.
+   - 지역 변수와 매개변수가 담긴 환경 레코드
+   - 어느 지점에서 멈췄는지 (재개 위치)
+4. `f()` 호출문의 반환 주소로 제어권이 넘어간다. 즉 `f()`는 **여기서 반환된다.** 반환값은 pending 상태의 프로미스다.
+5. 호출한 쪽이 다음 줄을 계속 실행한다. `console.log("3")`이 여기서 실행된다.
+
+콜 스택 상태로 적으면 이렇다.
+
+```
+[전역]
+[전역, f]            f() 호출, '1' 출력
+[전역]               await 도달 → f 컨텍스트 pop (보관됨), pending 프로미스 반환
+[전역, console.log]  '3' 출력
+[전역]
+[]                   스크립트 끝
+
+[마이크로태스크 소진]
+[f]                  보관돼 있던 f 컨텍스트를 다시 push, await 다음 줄부터 재개
+[]                   '2' 출력 후 f 종료
+```
+
+#### 재개
+
+- `p`가 settled되면 등록해둔 재개 작업이 마이크로태스크 큐에 들어간다.
+- 이벤트 루프가 그걸 꺼내 콜 스택에 push한다. 이때 보관돼 있던 실행 컨텍스트가 복원되고, `await` 다음 줄부터 실행된다.
+- `v`에는 `p.value`가 바인딩된다. `p`가 rejected면 `await` 지점에서 예외가 throw된다.
+- 지역 변수가 그대로 살아 있는 이유는 환경 레코드가 힙에 있고 보관된 컨텍스트가 그걸 참조하고 있기 때문이다. 콜 스택에서 pop된 것은 실행 위치이지 변수 저장소가 아니다.
+
+**정리 문장.** `await`은 스레드를 멈추지 않는다. 멈추는 것은 그 async 함수 하나뿐이고, 그 함수의 컨텍스트가 콜 스택에서 빠지기 때문에 스레드는 곧바로 다른 코드를 실행한다.
+
+**확인 문제.**
+
+```js
+async function f() {
+  console.log("A");
+  await null;
+  console.log("B");
+}
+
+console.log("C");
+f();
+console.log("D");
+```
+
+출력 순서는? 그리고 `'D'`가 출력되는 시점에 콜 스택과 마이크로태스크 큐 상태는?
+
+**답.** `C A D B`
+
+```
+'C' 출력
+f() 호출 → 콜 스택 [전역, f] → 'A' 출력
+await null 도달 → f 컨텍스트 pop 후 보관, 재개 작업이 마이크로태스크 큐 진입
+콜 스택: [전역]   마이크로태스크 큐: [f재개]
+'D' 출력
+스크립트 끝 → 콜 스택 []
+마이크로태스크 소진 → f 재개 → 'B' 출력
+```
+
+---
+
+### B-3. await 대상별 소요 틱
+
+`await`이 소비하는 마이크로태스크 개수는 피연산자 종류에 따라 다르다. 여러 비동기 코드가 섞였을 때 순서가 갈리는 원인이 대부분 여기다.
+
+명세상 `await v`는 두 단계다. 여기서 `PromiseResolve`는 명세에 정의된 내부 동작의 이름이고, JS 코드에서 직접 부르는 함수가 아니다. 하는 일은 `Promise.resolve(v)`와 같다.
+
+```
+1. promise = PromiseResolve(v)
+   - v가 네이티브 프로미스면 그대로 사용한다 (새 프로미스를 만들지 않는다)
+   - 아니면 v를 값으로 하는 fulfilled 프로미스를 새로 만든다
+2. promise에 재개 콜백을 등록한다 (마이크로태스크 1개 소비)
+```
+
+| 피연산자                       | 소비 틱 | 비고                                                        |
+| ------------------------------ | ------- | ----------------------------------------------------------- |
+| 네이티브 프로미스              | 1       | ES2019 이후 최적화된 경로                                   |
+| 일반 값 (`await 1`)            | 1       | 값으로 fulfilled 프로미스를 만든 뒤                         |
+| thenable (`.then`만 있는 객체) | 2 이상  | `.then`을 호출하는 작업이 추가로 마이크로태스크 큐에 들어감 |
+
+- ES2018까지는 네이티브 프로미스도 3틱이었다. 구형 자료에서 순서가 다르게 적혀 있으면 이 최적화 전 기준이다.
+- `await 1`이 1틱이라는 것은 **값이 이미 있어도 반드시 마이크로태스크 큐를 거친다**는 뜻이다. 1일차의 "콜백은 절대 동기적으로 안 돈다"가 `await`에도 그대로 적용된다.
+
+**확인 문제.**
+
+```js
+async function f() {
+  console.log("f1");
+  await g();
+  console.log("f2");
+}
+
+async function g() {
+  console.log("g1");
+}
+
+f();
+
+Promise.resolve()
+  .then(() => console.log("p1"))
+  .then(() => console.log("p2"));
+
+console.log("sync");
+```
+
+**답.** `f1 g1 sync f2 p1 p2`
+
+```
+f() 호출 → 'f1' 출력
+g() 호출 → 'g1' 출력, g는 값 없이 반환 → g의 프로미스는 즉시 fulfilled
+await g() → 네이티브 프로미스, 이미 fulfilled → 재개 작업이 마이크로태스크 큐 진입 (1틱)
+  마이크로태스크 큐: [f재개]
+f 컨텍스트 pop
+
+.then(p1) 등록 → 이미 fulfilled → 마이크로태스크 큐: [f재개, p1]
+  (.then(p2)는 pending인 프로미스에 등록되므로 아직 마이크로태스크 큐에 안 들어감)
+
+'sync' 출력
+
+[마이크로태스크 소진] f재개 → 'f2' / p1 → 'p1', 마이크로태스크 큐에 p2 추가 / p2 → 'p2'
+```
+
+`f2`가 `p1`보다 먼저인 이유는 `await`이 1틱만 쓰기 때문에 재개 작업이 `p1`보다 먼저 마이크로태스크 큐에 들어갔기 때문이다.
+
+---
+
+### B-4. 에러 처리
+
+`await`한 프로미스가 rejected면 **그 await 지점에서 예외가 throw된다.** 그래서 동기 코드와 같은 `try/catch`로 잡힌다.
+
+```js
+async function f() {
+  try {
+    const v = await Promise.reject(new Error("boom"));
+    console.log("실행 안 됨");
+  } catch (e) {
+    console.log("잡힘:", e.message);
+  } finally {
+    console.log("finally");
+  }
+}
+```
+
+`.catch`로 쓴 것과 같은 구조다.
+
+```js
+Promise.reject(new Error("boom"))
+  .then(() => console.log("실행 안 됨"))
+  .catch((e) => console.log("잡힘:", e.message));
+```
+
+#### try/catch가 못 잡는 경우
+
+**await를 빠뜨리면 못 잡는다.**
+
+```js
+async function f() {
+  try {
+    g(); // await 없음
+  } catch (e) {
+    console.log("여기 안 들어옴");
+  }
+}
+```
+
+`g()`는 프로미스를 반환하고 즉시 반환된다. `try` 블록은 그대로 끝난다. rejection은 나중에 일어나므로 이미 빠져나온 `catch`에 걸릴 수 없다. 2일차의 run-to-completion과 같은 구조다. `try` 블록은 동기적으로 끝났다.
+
+**return promise도 못 잡는다.**
+
+```js
+async function f() {
+  try {
+    return g(); // 프로미스를 그대로 반환
+  } catch (e) {
+    console.log("여기 안 들어옴");
+  }
+}
+```
+
+`return g()`는 프로미스를 반환할 뿐이고, 그 프로미스가 rejected가 되는 것은 f가 끝난 뒤다. `return await g()`로 쓰면 f 안에서 rejection이 throw되므로 잡힌다. B-1에서 말한 `return await`을 쓰는 실무적 이유가 이것이다.
+
+#### 처리되지 않은 rejection
+
+catch가 어디에도 없으면 프로미스는 rejected인 채로 아무도 안 보는 상태가 된다.
+
+```js
+async function f() {
+  throw new Error("boom");
+}
+f(); // .catch 없음
+```
+
+- 브라우저: `window`에 `unhandledrejection` 이벤트가 발생하고 콘솔에 에러가 찍힌다. 스크립트는 멈추지 않는다.
+- Node: `unhandledRejection` 이벤트. Node 15부터 기본 동작이 프로세스 종료다.
+
+동기 코드의 처리되지 않은 예외와 다른 점은, 프로미스는 나중에 `.catch`가 붙을 수도 있으므로 판정이 마이크로태스크 소진 이후로 미뤄진다는 것이다.
+
+---
+
+### B-5. 순차 실행 함정
+
+```js
+async function loadAll(ids) {
+  const results = [];
+  for (const id of ids) {
+    const r = await fetch(`/api/${id}`); // ← 여기
+    results.push(await r.json());
+  }
+  return results;
+}
+```
+
+`fetch`가 각각 200ms 걸리고 id가 5개면 총 1000ms가 걸린다. 5개를 동시에 보내면 200ms면 되는데도.
+
+이유는 B-2의 정지·재개 메커니즘 그대로다.
+
+```
+1회차 반복: fetch 호출 → 요청 전송 → await → f 컨텍스트 pop
+            응답 도착까지 f는 재개되지 않음
+            재개 → results.push → 반복문 다음 회차로
+2회차 반복: fetch 호출 ← 1회차 응답이 온 뒤에야 실행됨
+```
+
+2회차 `fetch`는 1회차가 끝나기 전까지 **호출조차 되지 않는다.** 반복문의 다음 회차로 가는 것 자체가 재개 이후이기 때문이다.
+
+의존 관계가 있으면 이게 맞다. 없으면 요청을 먼저 다 보내고 나중에 기다려야 한다.
+
+```js
+const promises = ids.map((id) => fetch(`/api/${id}`)); // 호출은 전부 즉시
+const responses = [];
+for (const p of promises) {
+  responses.push(await p); // 이미 진행 중인 것들을 기다리기만 함
+}
+```
+
+`fetch` 호출이 반복문 밖에서 전부 끝났으므로 5개 요청이 동시에 나간다. `await`은 이미 진행 중인 프로미스를 기다릴 뿐이다. 실제로는 `Promise.all`을 쓰는데, 그건 4일차.
+
+#### forEach 안의 await
+
+```js
+ids.forEach(async (id) => {
+  const r = await fetch(`/api/${id}`);
+  console.log(r);
+});
+console.log("끝"); // 먼저 출력됨
+```
+
+`forEach`는 콜백의 반환값을 무시한다. 콜백이 pending 프로미스를 반환해도 `forEach`는 기다리지 않고 다음 요소로 넘어간다. 전부 기다리려면 `for...of` + `await`이거나 `Promise.all(ids.map(...))`이다.
+
+---
+
+### B-6. 종합 실행 순서
+
+**확인 문제.**
+
+```js
+console.log("1");
+
+setTimeout(() => console.log("2"), 0);
+
+async function a() {
+  console.log("3");
+  await b();
+  console.log("4");
+}
+
+async function b() {
+  console.log("5");
+}
+
+a();
+
+new Promise((resolve) => {
+  console.log("6");
+  resolve();
+}).then(() => console.log("7"));
+
+console.log("8");
+```
+
+**답.** `1 3 5 6 8 4 7 2`
+
+```
+[스크립트 태스크]
+  '1' 출력
+  setTimeout 등록 → 만료 → 태스크 큐: [2]
+  a() 호출 → '3' 출력
+    b() 호출 → '5' 출력, b 반환 → b의 프로미스 즉시 fulfilled
+    await → 네이티브 프로미스 1틱 → 마이크로태스크 큐: [a재개]
+    a 컨텍스트 pop, pending 프로미스 반환
+  new Promise → executor 동기 실행 → '6' 출력 → resolve()
+    .then(7) 등록 → 이미 fulfilled → 마이크로태스크 큐: [a재개, 7]
+  '8' 출력
+  콜 스택: []
+
+[마이크로태스크 소진]
+  a재개 → '4' 출력
+  7 → '7' 출력
+
+[다음 틱]
+  2 → '2' 출력
+```
+
+- 함수 선언은 호이스팅되므로 `a()` 호출 시점에 `b`가 아래에 있어도 문제없다.
+- `async` 함수 안이라도 `await` 전까지는 전부 동기다. `3`과 `5`가 `6`보다 먼저인 이유.
+
+---
+
+## 틀렸거나 부족했던 부분
+
+- `await`이 "기다린다"는 표현 때문에 스레드가 멈춘다고 생각하기 쉽다. 멈추는 것은 그 async 함수 하나이고, 컨텍스트가 콜 스택에서 빠지므로 스레드는 즉시 다른 코드를 실행한다.
+- `async` 함수는 호출 즉시 동기적으로 실행되기 시작한다. 첫 `await`에 도달해야 비로소 반환된다.
+- `.then(cb)`을 호출하는 것과 `cb`가 마이크로태스크 큐에 들어가는 것은 다른 사건이다. 프로미스가 pending이면 어느 큐에도 안 들어가고 프로미스 객체의 callbacks 배열에 저장된다.
+- `try/catch`가 잡는 것은 `await` 지점에서 throw된 예외뿐이다. `await` 없이 호출하거나 `return promise`로 반환하면 못 잡는다.
+- 반복문 안의 `await`은 다음 회차의 함수 호출 자체를 늦춘다. 요청이 병렬로 안 나가는 이유가 이것.
+- `return Promise.resolve(v)`와 `return v`는 반환 프로미스가 확정되는 시점이 다르다. 전자가 2틱 늦다.
+
+## 면접용 1분 답변
+
+```
+"async/await이 어떻게 동작하나요?"
+
+async를 붙이면 함수의 반환값이 항상 프로미스가 됩니다. 값을 반환하면 그 값으로 fulfilled된 프로미스가 되고, 예외를 던지면 rejected 프로미스가 됩니다.
+
+async 함수도 호출되면 일반 함수처럼 실행 컨텍스트가 만들어져 콜 스택에 쌓이고, 첫 await을 만나기 전까지는 완전히 동기적으로 실행됩니다.
+
+await을 만나면 세 가지가 일어납니다. 먼저 대상 프로미스에 재개 콜백을 등록하고, 그 다음 함수의 실행 컨텍스트를 콜 스택에서 pop하되 버리지 않고 지역 변수와 재개 위치를 함께 보관합니다. 그리고 호출한 쪽으로 pending 상태의 프로미스를 반환합니다. 그래서 await은 스레드를 멈추는 게 아니라 그 함수 하나만 멈추는 것이고, 스레드는 곧바로 다음 코드를 실행합니다.
+
+대상 프로미스가 settled되면 재개 작업이 마이크로태스크 큐에 들어가고, 이벤트 루프가 이를 꺼내 보관해둔 컨텍스트를 다시 콜 스택에 push합니다. await 다음 줄부터 실행이 이어지고, 프로미스가 rejected면 await 지점에서 예외가 throw되기 때문에 동기 코드처럼 try/catch로 잡을 수 있습니다.
+
+마이크로태스크 큐를 거치기 때문에 값이 이미 확정된 프로미스를 await해도 콜백이 동기적으로 실행되는 일은 없습니다. 네이티브 프로미스를 await하면 마이크로태스크 한 개를 소비하고, 이 때문에 프로미스 체인과 섞였을 때 실행 순서가 갈립니다.
+
+주의할 점은 반복문 안의 await입니다. 다음 회차로 넘어가는 것 자체가 재개 이후이기 때문에 요청이 순차적으로 나가게 됩니다. 서로 의존하지 않는 작업이라면 호출을 먼저 모두 하고 Promise.all로 기다려야 합니다.
+```
+
+## 한 줄 요약
+
+- `await`은 async 함수의 실행 컨텍스트를 콜 스택에서 빼내 보관했다가 대상 프로미스가 settled되면 마이크로태스크로 다시 push해 재개하는 문법이며, 그래서 코드는 동기처럼 보이지만 실행 순서는 마이크로태스크 큐 규칙을 그대로 따른다.

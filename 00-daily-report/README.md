@@ -21,3 +21,5 @@
 | 2026-07-20 | Network | 웹소켓 핸드셰이크 (Upgrade·101·Key/Accept) | [노트](../01_network/2026-07-20-월-웹소켓-핸드셰이크.md) |
 | 2026-07-21 | Network | TCP 핸드셰이크 (3-way·4-way·상태전이·SYN Flood/Cookie) | [노트](../01_network/2026-07-21-화-TCP-핸드셰이크.md) |
 | 2026-07-22 | JavaScript | 프로미스 ① 개념·상태·체이닝 (3상태·executor·then/catch/finally) | [노트](../01_javascript/2026-07-22-수-JavaScript-프로미스.md) |
+| 2026-07-23 | JavaScript | 이벤트 루프 (실행 컨텍스트·콜 스택·태스크/마이크로태스크 큐·run-to-completion) | [노트](../01_javascript/2026-07-23-목-JavaScript-이벤트-루프.md) |
+| 2026-07-24 | JavaScript | async/await (async 반환값·정지와 재개·소요 틱·에러 처리·순차 함정) + 마이크로태스크 큐 복습 | [노트](../01_javascript/2026-07-24-금-JavaScript-async-await.md) |
