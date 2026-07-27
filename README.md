@@ -11,11 +11,11 @@ CS 과목별 폴더와 빠른 참고용 데일리 리포트 폴더로 구성되�
 <!-- STATUS:START -->
 <!-- 이 구간은 scripts/status.sh가 자동 생성합니다. 직접 수정하지 마세요. -->
 
-## 📊 공부 현황 — 연속 14일째 🔥🔥 불붙었다
+## 📊 공부 현황 — 연속 15일째 🔥🔥 불붙었다
 
 | 연속 학습(평일) | 총 학습일 | 총 노트 | 최근 학습일 |
 | :---: | :---: | :---: | :---: |
-| **14일** | 14일 | 14개 | 2026-07-24 |
+| **15일** | 15일 | 15개 | 2026-07-27 |
 
 <details>
 <summary>과목별 · 최근 노트 펼쳐보기</summary>
@@ -25,22 +25,22 @@ CS 과목별 폴더와 빠른 참고용 데일리 리포트 폴더로 구성되�
 | 과목 | 노트 수 |
 | --- | --- |
 | Frontend | 1 |
-| JavaScript | 6 |
+| JavaScript | 7 |
 | Network | 7 |
 
 **최근 노트**
 
 | 날짜 | 과목 | 주제 | 링크 |
 | --- | --- | --- | --- |
+| 2026-07-27 | JavaScript | JavaScript 프로미스 (Promise) — 4일차: 조합 API(all·allSettled·race·any)·에러 전파 | [노트](./01_javascript/2026-07-27-월-JavaScript-프로미스-조합-API.md) |
 | 2026-07-24 | JavaScript | JavaScript async / await — 3일차: 마이크로태스크 큐 복습 · async/await | [노트](./01_javascript/2026-07-24-금-JavaScript-async-await.md) |
 | 2026-07-23 | JavaScript | JavaScript 이벤트 루프 (Event Loop) — 2일차: 이벤트 루프 | [노트](./01_javascript/2026-07-23-목-JavaScript-이벤트-루프.md) |
 | 2026-07-22 | JavaScript | JavaScript 프로미스 (Promise) — 1일차: 개념·상태·체이닝 | [노트](./01_javascript/2026-07-22-수-JavaScript-프로미스.md) |
 | 2026-07-21 | Network | TCP 핸드셰이크 (TCP 3-way / 4-way Handshake) | [노트](./01_network/2026-07-21-화-TCP-핸드셰이크.md) |
-| 2026-07-20 | Network | 웹소켓 핸드셰이크 (WebSocket Handshake) | [노트](./01_network/2026-07-20-월-웹소켓-핸드셰이크.md) |
 
 </details>
 
-<sub>🔄 마지막 갱신: 2026-07-24 13:50 · `bash scripts/status.sh`로 갱신</sub>
+<sub>🔄 마지막 갱신: 2026-07-27 12:27 · `bash scripts/status.sh`로 갱신</sub>
 <!-- STATUS:END -->
 
 ## 공부 방식
