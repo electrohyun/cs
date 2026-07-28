@@ -13,6 +13,7 @@ JavaScript 언어 코어(new·this·클로저·프로토타입 등) 공부 기�
 | 2026-07-23 | 이벤트 루프 (실행 컨텍스트·콜 스택·태스크/마이크로태스크 큐·run-to-completion) | 😎 | [노트](./2026-07-23-목-JavaScript-이벤트-루프.md) |
 | 2026-07-24 | async/await (async 반환값·정지와 재개·소요 틱·에러 처리·순차 함정) + 마이크로태스크 큐 복습 | 🙂 | [노트](./2026-07-24-금-JavaScript-async-await.md) |
 | 2026-07-27 | 프로미스 ② 조합 API·에러 전파 (all·allSettled·race·any·catch/finally·AggregateError) | 🙂 | [노트](./2026-07-27-월-JavaScript-프로미스-조합-API.md) |
+| 2026-07-28 | 프로미스 정리 — 1~4일차 통합 복습 (실행 순서 문제 5선: 큐 진입 시점·체이닝·await·executor 동기 실행) | 😎 | [노트](./2026-07-28-화-JavaScript-프로미스-정리.md) |
 
 ## README 갱신 규칙
 
