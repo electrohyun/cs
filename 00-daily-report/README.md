@@ -25,3 +25,5 @@
 | 2026-07-24 | JavaScript | async/await (async 반환값·정지와 재개·소요 틱·에러 처리·순차 함정) + 마이크로태스크 큐 복습 | [노트](../01_javascript/2026-07-24-금-JavaScript-async-await.md) |
 | 2026-07-27 | JavaScript | 프로미스 ② 조합 API·에러 전파 (all·allSettled·race·any·catch/finally·AggregateError) | [노트](../01_javascript/2026-07-27-월-JavaScript-프로미스-조합-API.md) |
 | 2026-07-28 | JavaScript | 프로미스 정리 — 1~4일차 통합 복습 (실행 순서 문제 5선: 큐 진입 시점·체이닝·await·executor 동기 실행) | [노트](../01_javascript/2026-07-28-화-JavaScript-프로미스-정리.md) |
+| 2026-07-29 | Network | 웹소켓 프레임 구조 (레이아웃·opcode·마스킹·fragmentation·컨트롤 프레임·close code) | [노트](../01_network/2026-07-29-수-웹소켓-프레임-구조.md) |
+| 2026-07-30 | JavaScript | var · let · const (스코프·재선언·재할당·호이스팅/TDZ·const 바인딩·반복문 클로저) | [노트](../01_javascript/2026-07-30-목-JavaScript-var-let-const.md) |
