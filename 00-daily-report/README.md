@@ -28,3 +28,9 @@
 | 2026-07-29 | Network | 웹소켓 프레임 구조 (레이아웃·opcode·마스킹·fragmentation·컨트롤 프레임·close code) | [노트](../01_network/2026-07-29-수-웹소켓-프레임-구조.md) |
 | 2026-07-30 | JavaScript | var · let · const (스코프·재선언·재할당·호이스팅/TDZ·const 바인딩·반복문 클로저) | [노트](../01_javascript/2026-07-30-목-JavaScript-var-let-const.md) |
 | 2026-07-31 | Frontend | HTML이란 무엇인가 (하이퍼텍스트·마크업·요소/속성·시맨틱과 웹 접근성) | [노트](../01_frontend/2026-07-31-금-HTML이란-무엇인가.md) |
+
+## 2026년 8월
+
+| 날짜 | 과목 | 주제 | 원본 |
+| --- | --- | --- | --- |
+| 2026-08-03 | Frontend | HTML doctype (렌더링 모드·쿼크/표준·HTML5 단순화·SGML/DTD 관계) | [노트](../01_frontend/2026-08-03-월-HTML-doctype.md) |
