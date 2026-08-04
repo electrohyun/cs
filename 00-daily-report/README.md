@@ -34,3 +34,4 @@
 | 날짜 | 과목 | 주제 | 원본 |
 | --- | --- | --- | --- |
 | 2026-08-03 | Frontend | HTML doctype (렌더링 모드·쿼크/표준·HTML5 단순화·SGML/DTD 관계) | [노트](../01_frontend/2026-08-03-월-HTML-doctype.md) |
+| 2026-08-04 | Frontend | `<head>` 안에 들어가는 태그 (메타데이터·title·meta·link·style·script·charset·viewport) | [노트](../01_frontend/2026-08-04-화-head-안에-들어가는-태그.md) |

@@ -9,6 +9,7 @@
 | 2026-07-09 | CRP (Critical Rendering Path) | 😎 | [노트](./2026-07-09-목-CRP-크리티컬-렌더링-패스.md) |
 | 2026-07-31 | HTML이란 무엇인가 (하이퍼텍스트·마크업·요소/속성·시맨틱과 웹 접근성) | 🙂 | [노트](./2026-07-31-금-HTML이란-무엇인가.md) |
 | 2026-08-03 | HTML doctype (렌더링 모드·쿼크/표준·HTML5 단순화·SGML/DTD) | 🙂 | [노트](./2026-08-03-월-HTML-doctype.md) |
+| 2026-08-04 | `<head>` 안에 들어가는 태그 (메타데이터·title·meta·link·style·script·charset·viewport) | 🙂 | [노트](./2026-08-04-화-head-안에-들어가는-태그.md) |
 
 ## README 갱신 규칙
 

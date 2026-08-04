@@ -72,6 +72,9 @@
 ### 완료
 
 - [x] 2026-07-09 — CRP 크리티컬 렌더링 패스 · Q93
+- [x] 2026-07-31 — HTML이란 무엇인가(하이퍼텍스트·마크업·요소/속성·시맨틱과 접근성) · Q1 Q4
+- [x] 2026-08-03 — HTML doctype(렌더링 모드·쿼크/표준·HTML5 단순화·SGML/DTD) · Q2
+- [x] 2026-08-04 — `<head>` 안에 들어가는 태그(메타데이터·title·meta·link·style·script·charset·viewport) · Q3
 
 ### 예정 — 리액트
 
@@ -101,7 +104,7 @@
 
 ### 예정 — HTML
 
-- [ ] HTML 기본(HTML·Doctype·`<head>`·종료 태그) · Q1 Q2 Q3 Q6
+- [ ] 종료 태그(빈 요소·self-closing·생략 가능 태그) · Q6
 - [ ] 시맨틱 태그·헤딩·웹 표준과 접근성 · Q4 Q5 Q12
 - [ ] 블록 vs 인라인·`data-*`·`<a>` · Q7 Q8 Q10
 - [ ] 웹 스토리지(local·session·쿠키 비교) · Q9
