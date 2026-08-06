@@ -11,6 +11,7 @@
 | 2026-08-03 | HTML doctype (렌더링 모드·쿼크/표준·HTML5 단순화·SGML/DTD) | 🙂 | [노트](./2026-08-03-월-HTML-doctype.md) |
 | 2026-08-04 | `<head>` 안에 들어가는 태그 (메타데이터·title·meta·link·style·script·charset·viewport) | 🙂 | [노트](./2026-08-04-화-head-안에-들어가는-태그.md) |
 | 2026-08-05 | 시맨틱 태그 (div 수프·header/nav/main/section/article/aside·SEO·웹 접근성·유지보수성) | 🙂 | [노트](./2026-08-05-수-시맨틱-태그.md) |
+| 2026-08-06 | 웹 표준과 웹 접근성 (W3C 규약·호환성/SEO·대체 텍스트·키보드 접근·색 대비·WCAG) | 🙂 | [노트](./2026-08-06-목-웹-표준과-웹-접근성.md) |
 
 ## README 갱신 규칙
 
