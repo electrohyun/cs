@@ -77,6 +77,7 @@
 - [x] 2026-08-04 — `<head>` 안에 들어가는 태그(메타데이터·title·meta·link·style·script·charset·viewport) · Q3
 - [x] 2026-08-05 — 시맨틱 태그(div 수프·header/nav/main/section/article/aside·SEO·접근성·유지보수성) · Q4 Q5
 - [x] 2026-08-06 — 웹 표준과 웹 접근성(W3C 규약·호환성/SEO·대체 텍스트·키보드 접근·색 대비·WCAG) · Q12
+- [x] 2026-08-07 — 종료 태그(빈 태그·img/br/hr/input/link/meta·XHTML 슬래시·파서 처리) · Q6
 
 ### 예정 — 리액트
 
@@ -106,7 +107,6 @@
 
 ### 예정 — HTML
 
-- [ ] 종료 태그(빈 요소·self-closing·생략 가능 태그) · Q6
 - [ ] 헤딩(h1~h6·문서 개요·계층 구조) · Q12
 - [ ] 블록 vs 인라인·`data-*`·`<a>` · Q7 Q8 Q10
 - [ ] 웹 스토리지(local·session·쿠키 비교) · Q9

@@ -37,3 +37,4 @@
 | 2026-08-04 | Frontend | `<head>` 안에 들어가는 태그 (메타데이터·title·meta·link·style·script·charset·viewport) | [노트](../01_frontend/2026-08-04-화-head-안에-들어가는-태그.md) |
 | 2026-08-05 | Frontend | 시맨틱 태그 (div 수프·header/nav/main/section/article/aside·SEO·웹 접근성·유지보수성) | [노트](../01_frontend/2026-08-05-수-시맨틱-태그.md) |
 | 2026-08-06 | Frontend | 웹 표준과 웹 접근성 (W3C 규약·호환성/SEO·대체 텍스트·키보드 접근·색 대비·WCAG) | [노트](../01_frontend/2026-08-06-목-웹-표준과-웹-접근성.md) |
+| 2026-08-07 | Frontend | HTML 종료 태그 (빈 태그·img/br/hr/input/link/meta·XHTML 슬래시·파서 처리) | [노트](../01_frontend/2026-08-07-금-HTML-종료-태그.md) |
